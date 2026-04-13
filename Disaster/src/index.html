@@ -1,0 +1,1197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DARMS — Disaster Alert & Resource Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* ── TOKENS ── */
+        :root {
+          --bg:        #0a0c0f;
+          --surface:   #111418;
+          --surface2:  #181c22;
+          --border:    #252b34;
+          --border2:   #2e3542;
+          --text:      #d4dce8;
+          --muted:     #5a6475;
+          --accent:    #ff4530;
+          --accent2:   #ff7d30;
+          --green:     #2ecc71;
+          --yellow:    #f1c40f;
+          --blue:      #3498db;
+          --purple:    #9b59b6;
+          --mono:      'IBM Plex Mono', monospace;
+          --sans:      'IBM Plex Sans', sans-serif;
+          --display:   'Bebas Neue', sans-serif;
+          --r:         6px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+          background: var(--bg);
+          color: var(--text);
+          font-family: var(--sans);
+          font-size: 14px;
+          line-height: 1.6;
+          min-height: 100vh;
+        }
+
+        /* ── HEADER ── */
+        header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 0 32px;
+          height: 64px;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
+          position: sticky;
+          top: 0;
+          z-index: 100;
+        }
+
+        .logo {
+          display: flex;
+          align-items: baseline;
+          gap: 10px;
+        }
+
+        .logo-text {
+          font-family: var(--display);
+          font-size: 28px;
+          letter-spacing: 3px;
+          color: var(--accent);
+          line-height: 1;
+        }
+
+        .logo-sub {
+          font-family: var(--mono);
+          font-size: 10px;
+          color: var(--muted);
+          letter-spacing: 2px;
+          text-transform: uppercase;
+        }
+
+        .header-right {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .status-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          background: var(--green);
+          box-shadow: 0 0 8px var(--green);
+          animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50%       { opacity: 0.4; }
+        }
+
+        .status-label {
+          font-family: var(--mono);
+          font-size: 11px;
+          color: var(--muted);
+          letter-spacing: 1px;
+        }
+
+        .api-url {
+          font-family: var(--mono);
+          font-size: 11px;
+          color: var(--muted);
+          background: var(--surface2);
+          padding: 4px 10px;
+          border-radius: var(--r);
+          border: 1px solid var(--border);
+        }
+
+        /* ── LAYOUT ── */
+        .app {
+          display: grid;
+          grid-template-columns: 320px 1fr;
+          height: calc(100vh - 64px);
+        }
+
+        /* ── SIDEBAR ── */
+        .sidebar {
+          border-right: 1px solid var(--border);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .sidebar-header {
+          padding: 20px 20px 16px;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
+        }
+
+        .sidebar-title {
+          font-family: var(--mono);
+          font-size: 10px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: var(--muted);
+          margin-bottom: 12px;
+        }
+
+        /* ── STATS ROW ── */
+        .stats-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 8px;
+        }
+
+        .stat-card {
+          background: var(--surface2);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          padding: 10px 12px;
+          text-align: center;
+        }
+
+        .stat-num {
+          font-family: var(--display);
+          font-size: 28px;
+          line-height: 1;
+          color: var(--accent);
+        }
+
+        .stat-num.green  { color: var(--green); }
+        .stat-num.blue   { color: var(--blue);  }
+
+        .stat-label {
+          font-family: var(--mono);
+          font-size: 9px;
+          letter-spacing: 1px;
+          color: var(--muted);
+          text-transform: uppercase;
+          margin-top: 2px;
+        }
+
+        /* ── DISASTER LIST ── */
+        .list-scroll {
+          flex: 1;
+          overflow-y: auto;
+          padding: 12px;
+        }
+
+        .list-scroll::-webkit-scrollbar { width: 4px; }
+        .list-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+        .disaster-card {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          padding: 14px;
+          margin-bottom: 8px;
+          cursor: pointer;
+          transition: border-color .15s, background .15s;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .disaster-card::before {
+          content: '';
+          position: absolute;
+          left: 0; top: 0; bottom: 0;
+          width: 3px;
+          background: var(--accent);
+        }
+
+        .disaster-card.severity-CRITICAL::before { background: var(--accent); }
+        .disaster-card.severity-HIGH::before     { background: var(--accent2); }
+        .disaster-card.severity-MEDIUM::before   { background: var(--yellow); }
+        .disaster-card.severity-LOW::before      { background: var(--blue); }
+
+        .disaster-card:hover,
+        .disaster-card.active {
+          border-color: var(--border2);
+          background: var(--surface2);
+        }
+
+        .card-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 6px;
+        }
+
+        .card-type {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-family: var(--mono);
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text);
+        }
+
+        .type-icon { font-size: 16px; }
+
+        .badge {
+          font-family: var(--mono);
+          font-size: 9px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          padding: 2px 6px;
+          border-radius: 3px;
+          text-transform: uppercase;
+        }
+
+        .badge-CRITICAL { background: rgba(255,69,48,.15); color: var(--accent);  border: 1px solid rgba(255,69,48,.3); }
+        .badge-HIGH     { background: rgba(255,125,48,.15); color: var(--accent2); border: 1px solid rgba(255,125,48,.3); }
+        .badge-MEDIUM   { background: rgba(241,196,15,.15); color: var(--yellow); border: 1px solid rgba(241,196,15,.3); }
+        .badge-LOW      { background: rgba(52,152,219,.15); color: var(--blue);   border: 1px solid rgba(52,152,219,.3); }
+
+        .card-location {
+          font-family: var(--mono);
+          font-size: 11px;
+          color: var(--muted);
+          margin-top: 2px;
+        }
+
+        .card-id {
+          font-family: var(--mono);
+          font-size: 10px;
+          color: var(--border2);
+          margin-top: 6px;
+        }
+
+        .card-meta {
+          display: flex;
+          gap: 12px;
+          margin-top: 8px;
+        }
+
+        .card-meta span {
+          font-family: var(--mono);
+          font-size: 10px;
+          color: var(--muted);
+        }
+
+        /* ── MAIN PANEL ── */
+        .main {
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+
+        .main-header {
+          padding: 20px 28px 16px;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .main-title {
+          font-family: var(--display);
+          font-size: 22px;
+          letter-spacing: 2px;
+          color: var(--text);
+        }
+
+        .main-content {
+          flex: 1;
+          overflow-y: auto;
+          padding: 24px 28px;
+        }
+
+        .main-content::-webkit-scrollbar { width: 4px; }
+        .main-content::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+        /* ── EMPTY STATE ── */
+        .empty-state {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+          gap: 16px;
+          color: var(--muted);
+        }
+
+        .empty-state .big-icon { font-size: 64px; opacity: .3; }
+
+        .empty-state p {
+          font-family: var(--mono);
+          font-size: 12px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+
+        /* ── DETAIL VIEW ── */
+        .detail-hero {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          padding: 24px;
+          margin-bottom: 20px;
+          display: flex;
+          align-items: center;
+          gap: 24px;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .detail-hero::after {
+          content: attr(data-type);
+          position: absolute;
+          right: -10px; top: -10px;
+          font-family: var(--display);
+          font-size: 120px;
+          color: rgba(255,255,255,.02);
+          line-height: 1;
+          pointer-events: none;
+        }
+
+        .hero-icon {
+          font-size: 56px;
+          line-height: 1;
+        }
+
+        .hero-info h2 {
+          font-family: var(--display);
+          font-size: 32px;
+          letter-spacing: 2px;
+          color: var(--text);
+          margin-bottom: 4px;
+        }
+
+        .hero-info .loc {
+          font-family: var(--mono);
+          font-size: 13px;
+          color: var(--muted);
+          margin-bottom: 10px;
+        }
+
+        .hero-meta {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+
+        .chip {
+          font-family: var(--mono);
+          font-size: 11px;
+          padding: 4px 10px;
+          border-radius: 4px;
+          border: 1px solid var(--border2);
+          color: var(--muted);
+        }
+
+        /* ── TWO COL GRID ── */
+        .two-col {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 20px;
+        }
+
+        .panel {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          overflow: hidden;
+        }
+
+        .panel-head {
+          padding: 12px 16px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          background: var(--surface2);
+        }
+
+        .panel-head-title {
+          font-family: var(--mono);
+          font-size: 11px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: var(--muted);
+        }
+
+        .panel-head-count {
+          margin-left: auto;
+          font-family: var(--mono);
+          font-size: 11px;
+          color: var(--accent);
+        }
+
+        .panel-body { padding: 12px 0; }
+
+        /* ── LOG ITEMS ── */
+        .log-item {
+          padding: 10px 16px;
+          border-bottom: 1px solid var(--border);
+          animation: slideIn .2s ease;
+        }
+
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-6px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
+        .log-item:last-child { border-bottom: none; }
+
+        .log-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 4px;
+        }
+
+        .log-role {
+          font-family: var(--mono);
+          font-size: 9px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          padding: 1px 5px;
+          border-radius: 3px;
+        }
+
+        .role-CITIZEN   { background: rgba(52,152,219,.15); color: var(--blue);   border: 1px solid rgba(52,152,219,.3); }
+        .role-AUTHORITY { background: rgba(155,89,182,.15); color: var(--purple); border: 1px solid rgba(155,89,182,.3); }
+
+        .log-name {
+          font-family: var(--mono);
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--text);
+        }
+
+        .log-time {
+          margin-left: auto;
+          font-family: var(--mono);
+          font-size: 10px;
+          color: var(--muted);
+        }
+
+        .log-msg {
+          font-family: var(--sans);
+          font-size: 12px;
+          color: var(--muted);
+          line-height: 1.5;
+        }
+
+        /* ── SERVICE LOG ── */
+        .service-item {
+          padding: 10px 16px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          gap: 12px;
+          align-items: flex-start;
+          animation: slideIn .2s ease;
+        }
+
+        .service-item:last-child { border-bottom: none; }
+
+        .service-icon {
+          width: 32px; height: 32px;
+          border-radius: 6px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 16px;
+          flex-shrink: 0;
+          background: var(--surface2);
+          border: 1px solid var(--border2);
+        }
+
+        .service-info { flex: 1; }
+
+        .service-name {
+          font-family: var(--mono);
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--green);
+          margin-bottom: 2px;
+        }
+
+        .service-action {
+          font-family: var(--sans);
+          font-size: 12px;
+          color: var(--muted);
+          line-height: 1.5;
+        }
+
+        .service-time {
+          font-family: var(--mono);
+          font-size: 10px;
+          color: var(--muted);
+          flex-shrink: 0;
+          padding-top: 2px;
+        }
+
+        /* ── FORM PANEL ── */
+        .form-panel {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+
+        .form-body {
+          padding: 20px;
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr auto;
+          gap: 12px;
+          align-items: end;
+        }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+
+        .field label {
+          font-family: var(--mono);
+          font-size: 10px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: var(--muted);
+        }
+
+        .field input,
+        .field select {
+          background: var(--surface2);
+          border: 1px solid var(--border2);
+          border-radius: var(--r);
+          color: var(--text);
+          font-family: var(--mono);
+          font-size: 13px;
+          padding: 9px 12px;
+          outline: none;
+          transition: border-color .15s;
+          width: 100%;
+        }
+
+        .field input:focus,
+        .field select:focus { border-color: var(--accent); }
+
+        .field select option { background: var(--surface2); }
+
+        .btn-primary {
+          background: var(--accent);
+          border: none;
+          border-radius: var(--r);
+          color: #fff;
+          font-family: var(--display);
+          font-size: 16px;
+          letter-spacing: 2px;
+          padding: 10px 20px;
+          cursor: pointer;
+          transition: opacity .15s, transform .1s;
+          white-space: nowrap;
+        }
+
+        .btn-primary:hover   { opacity: .85; }
+        .btn-primary:active  { transform: scale(.97); }
+        .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+
+        /* ── TOAST ── */
+        #toast {
+          position: fixed;
+          bottom: 24px;
+          right: 24px;
+          background: var(--surface2);
+          border: 1px solid var(--border2);
+          border-radius: var(--r);
+          padding: 12px 18px;
+          font-family: var(--mono);
+          font-size: 12px;
+          color: var(--text);
+          z-index: 999;
+          display: none;
+          animation: fadeUp .2s ease;
+        }
+
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        #toast.success { border-color: var(--green);  color: var(--green); }
+        #toast.error   { border-color: var(--accent);  color: var(--accent); }
+
+        /* ── LOADING ── */
+        .spinner {
+          width: 16px; height: 16px;
+          border: 2px solid var(--border2);
+          border-top-color: var(--accent);
+          border-radius: 50%;
+          animation: spin .6s linear infinite;
+          display: inline-block;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── TYPE COLOURS ── */
+        .type-Fire       { color: #ff4530; }
+        .type-Flood      { color: #3498db; }
+        .type-Earthquake { color: #e67e22; }
+        .type-Cyclone    { color: #9b59b6; }
+
+        /* ── API EXPLORER ── */
+        .api-section {
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--r);
+          overflow: hidden;
+          margin-bottom: 20px;
+        }
+
+        .api-tabs {
+          display: flex;
+          border-bottom: 1px solid var(--border);
+          background: var(--surface2);
+        }
+
+        .api-tab {
+          font-family: var(--mono);
+          font-size: 11px;
+          letter-spacing: 1px;
+          padding: 10px 16px;
+          cursor: pointer;
+          color: var(--muted);
+          border-bottom: 2px solid transparent;
+          transition: color .15s, border-color .15s;
+          background: none;
+          border-left: none;
+          border-right: none;
+          border-top: none;
+        }
+
+        .api-tab.active {
+          color: var(--accent);
+          border-bottom-color: var(--accent);
+        }
+
+        .api-content { padding: 16px; display: none; }
+        .api-content.active { display: block; }
+
+        .code-block {
+          background: var(--bg);
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          padding: 12px 14px;
+          font-family: var(--mono);
+          font-size: 12px;
+          color: var(--text);
+          line-height: 1.7;
+          overflow-x: auto;
+          white-space: pre;
+        }
+
+        .code-block .method-GET    { color: var(--green); }
+        .code-block .method-POST   { color: var(--accent2); }
+        .code-block .key   { color: var(--blue); }
+        .code-block .val   { color: var(--yellow); }
+        .code-block .str   { color: #a8e6cf; }
+
+        /* ── NO SERVER NOTICE ── */
+        .no-server-banner {
+          background: rgba(255,69,48,.08);
+          border: 1px solid rgba(255,69,48,.25);
+          border-radius: var(--r);
+          padding: 12px 16px;
+          font-family: var(--mono);
+          font-size: 12px;
+          color: var(--accent);
+          margin-bottom: 20px;
+          display: none;
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="logo">
+        <span class="logo-text">DARMS</span>
+        <span class="logo-sub">Disaster Alert & Resource Mgmt</span>
+    </div>
+    <div class="header-right">
+        <div class="status-dot" id="serverDot"></div>
+        <span class="status-label" id="serverLabel">CONNECTING...</span>
+        <span class="api-url" id="apiUrlLabel">http://localhost:8080</span>
+    </div>
+</header>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">Live Incidents</div>
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-num" id="statTotal">—</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="statAlerts">—</div>
+                    <div class="stat-label">Alerts</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num green" id="statServices">—</div>
+                    <div class="stat-label">Actions</div>
+                </div>
+            </div>
+        </div>
+        <div class="list-scroll" id="incidentList">
+            <div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;">
+                <div class="spinner"></div><br>Loading incidents...
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+        <div class="main-header">
+            <span class="main-title" id="mainTitle">INCIDENT COMMAND</span>
+            <div style="display:flex;gap:10px;align-items:center">
+                <span id="refreshTimer" style="font-family:var(--mono);font-size:11px;color:var(--muted);">auto-refresh: 10s</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+
+            <!-- NO SERVER BANNER -->
+            <div class="no-server-banner" id="noServerBanner">
+                ⚠ Backend not reachable at localhost:8080 — run <code>java DisasterServer</code> to connect live data.
+                Demo mode is active with sample data.
+            </div>
+
+            <!-- REPORT FORM -->
+            <div class="form-panel">
+                <div class="panel-head">
+                    <span>⚡</span>
+                    <span class="panel-head-title">Report New Disaster</span>
+                </div>
+                <div class="form-body">
+                    <div class="field">
+                        <label>Disaster Type</label>
+                        <select id="fType">
+                            <option value="fire">🔥 Fire</option>
+                            <option value="flood">🌊 Flood</option>
+                            <option value="earthquake">🌍 Earthquake</option>
+                            <option value="cyclone">🌀 Cyclone</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Location</label>
+                        <input id="fLocation" type="text" placeholder="e.g. Sector 7, Mumbai" />
+                    </div>
+                    <div class="field">
+                        <label>Severity</label>
+                        <select id="fSeverity">
+                            <option value="LOW">LOW</option>
+                            <option value="MEDIUM">MEDIUM</option>
+                            <option value="HIGH" selected>HIGH</option>
+                            <option value="CRITICAL">CRITICAL</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" id="submitBtn" onclick="submitDisaster()">DISPATCH</button>
+                </div>
+            </div>
+
+            <!-- DETAIL / EMPTY -->
+            <div id="detailView">
+                <div class="empty-state">
+                    <div class="big-icon">🚨</div>
+                    <p>Select an incident to view details</p>
+                </div>
+            </div>
+
+            <!-- API DOCS -->
+            <div class="api-section">
+                <div class="panel-head" style="background:var(--surface2)">
+                    <span>🔌</span>
+                    <span class="panel-head-title">REST API Reference</span>
+                </div>
+                <div class="api-tabs">
+                    <button class="api-tab active" onclick="switchTab(this,'tab-list')">GET /disasters</button>
+                    <button class="api-tab" onclick="switchTab(this,'tab-get')">GET /:id</button>
+                    <button class="api-tab" onclick="switchTab(this,'tab-post')">POST /disasters</button>
+                    <button class="api-tab" onclick="switchTab(this,'tab-stats')">GET /stats</button>
+                </div>
+                <div class="api-content active" id="tab-list">
+                    <div class="code-block"><span class="method-GET">GET</span>  http://localhost:8080/api/disasters
+
+                        Response 200:
+                        [
+                        {
+                        <span class="key">"id"</span>:        <span class="str">"DIS-1001"</span>,
+                        <span class="key">"type"</span>:      <span class="str">"Flood"</span>,
+                        <span class="key">"location"</span>:  <span class="str">"Sector 7, Mumbai"</span>,
+                        <span class="key">"severity"</span>:  <span class="str">"HIGH"</span>,
+                        <span class="key">"status"</span>:    <span class="str">"ACTIVE"</span>,
+                        <span class="key">"createdAt"</span>: <span class="str">"2024-01-15 14:32:00"</span>,
+                        <span class="key">"alerts"</span>:    [...],
+                        <span class="key">"services"</span>:  [...]
+                        }
+                        ]</div>
+                </div>
+                <div class="api-content" id="tab-get">
+                    <div class="code-block"><span class="method-GET">GET</span>  http://localhost:8080/api/disasters/<span class="val">{id}</span>
+
+                        Response 200: Single DisasterRecord object (same shape as list item)
+                        Response 404: { <span class="key">"error"</span>: <span class="str">"Not found"</span> }</div>
+                </div>
+                <div class="api-content" id="tab-post">
+                    <div class="code-block"><span class="method-POST">POST</span> http://localhost:8080/api/disasters
+                        Content-Type: application/json
+
+                        Body:
+                        {
+                        <span class="key">"type"</span>:     <span class="str">"fire"</span>,         <span class="method-GET">// fire | flood | earthquake | cyclone</span>
+                        <span class="key">"location"</span>: <span class="str">"Dharavi, Mumbai"</span>,
+                        <span class="key">"severity"</span>: <span class="str">"CRITICAL"</span>      <span class="method-GET">// LOW | MEDIUM | HIGH | CRITICAL</span>
+                        }
+
+                        <span class="method-GET"># Factory creates correct Disaster subclass
+# Facade triggers Police + Hospital + Rescue (+ NGO if HIGH/CRITICAL)
+# Observer notifies all registered Citizens + Authorities</span>
+
+                        Response 201: Full DisasterRecord with alerts[] and services[]</div>
+                </div>
+                <div class="api-content" id="tab-stats">
+                    <div class="code-block"><span class="method-GET">GET</span>  http://localhost:8080/api/stats
+
+                        Response 200:
+                        {
+                        <span class="key">"total"</span>:              <span class="val">4</span>,
+                        <span class="key">"byType"</span>:            { <span class="key">"fire"</span>: <span class="val">1</span>, <span class="key">"flood"</span>: <span class="val">2</span>, ... },
+                        <span class="key">"bySeverity"</span>:        { <span class="key">"critical"</span>: <span class="val">1</span>, <span class="key">"high"</span>: <span class="val">2</span>, ... },
+                        <span class="key">"totalAlerts"</span>:       <span class="val">12</span>,
+                        <span class="key">"totalServiceActions"</span>: <span class="val">16</span>
+                        }</div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+    // ─── CONFIG ───────────────────────────────────────────
+    const API = 'http://localhost:8080/api';
+    let disasters = [];
+    let selectedId = null;
+    let serverOnline = false;
+    let refreshInterval;
+
+    // ─── ICONS / COLOURS ──────────────────────────────────
+    const TYPE_ICON = { Fire:'🔥', Flood:'🌊', Earthquake:'🌍', Cyclone:'🌀' };
+    const SVC_ICON  = { Police:'🚔', Hospital:'🏥', Rescue:'🆘', 'NGO Relief':'🏕️' };
+
+    // ─── DEMO DATA (shown when server is offline) ──────────
+    const DEMO = [
+      {
+        id: 'DIS-1001', type: 'Flood', location: 'Sector 7, Mumbai',
+        severity: 'HIGH', status: 'ACTIVE', createdAt: '2024-01-15 14:30:00',
+        alerts: [
+          { id:'A1', recipient:'Aisha Sharma', role:'CITIZEN',
+            message:'Aisha Sharma — Flood emergency at Sector 7, Mumbai [HIGH]. Evacuate immediately.', timestamp:'14:30:01' },
+          { id:'A2', recipient:'Rohan Mehta', role:'CITIZEN',
+            message:'Rohan Mehta — Flood emergency at Sector 7, Mumbai [HIGH]. Evacuate immediately.', timestamp:'14:30:01' },
+          { id:'A3', recipient:'Mumbai Disaster Mgmt Cell', role:'AUTHORITY',
+            message:'Mumbai Disaster Mgmt Cell — Flood event at Sector 7, Mumbai, severity HIGH. Mobilise resources.', timestamp:'14:30:01' }
+        ],
+        services: [
+          { service:'Police',    action:'Units dispatched to Sector 7, Mumbai for crowd control (Priority: HIGH).', timestamp:'14:30:00' },
+          { service:'Hospital',  action:'4 ambulances + medical teams deployed to Sector 7, Mumbai.', timestamp:'14:30:00' },
+          { service:'Rescue',    action:'Specialised Flood rescue team deployed to Sector 7, Mumbai with full gear.', timestamp:'14:30:00' },
+          { service:'NGO Relief',action:'Emergency relief camp established near Sector 7, Mumbai. Food/water/shelter ready.', timestamp:'14:30:00' }
+        ]
+      },
+      {
+        id: 'DIS-1002', type: 'Earthquake', location: 'Nashik, Maharashtra',
+        severity: 'CRITICAL', status: 'ACTIVE', createdAt: '2024-01-15 09:15:00',
+        alerts: [
+          { id:'A4', recipient:'Priya Nair', role:'CITIZEN',
+            message:'Priya Nair — Earthquake emergency at Nashik, Maharashtra [CRITICAL]. Evacuate immediately.', timestamp:'09:15:02' },
+          { id:'A5', recipient:'Maharashtra Civil Defense', role:'AUTHORITY',
+            message:'Maharashtra Civil Defense — Earthquake event at Nashik, severity CRITICAL. Mobilise resources.', timestamp:'09:15:02' },
+          { id:'A6', recipient:'NDRF HQ', role:'AUTHORITY',
+            message:'NDRF HQ — Earthquake event at Nashik, severity CRITICAL. Mobilise resources.', timestamp:'09:15:02' }
+        ],
+        services: [
+          { service:'Police',    action:'Units dispatched to Nashik, Maharashtra for crowd control (Priority: CRITICAL).', timestamp:'09:15:01' },
+          { service:'Hospital',  action:'6 ambulances + medical teams deployed to Nashik, Maharashtra.', timestamp:'09:15:01' },
+          { service:'Rescue',    action:'Specialised Earthquake rescue team deployed to Nashik with full gear.', timestamp:'09:15:01' },
+          { service:'NGO Relief',action:'Emergency relief camp established near Nashik. Food/water/shelter ready.', timestamp:'09:15:01' }
+        ]
+      }
+    ];
+
+    // ─── SERVER HEALTH CHECK ───────────────────────────────
+    async function checkServer() {
+      try {
+        const r = await fetch(`${API}/stats`, { signal: AbortSignal.timeout(2000) });
+        if (r.ok) {
+          setServerStatus(true);
+          return true;
+        }
+      } catch {}
+      setServerStatus(false);
+      return false;
+    }
+
+    function setServerStatus(online) {
+      serverOnline = online;
+      const dot   = document.getElementById('serverDot');
+      const label = document.getElementById('serverLabel');
+      const banner = document.getElementById('noServerBanner');
+      dot.style.background    = online ? 'var(--green)' : 'var(--accent)';
+      dot.style.boxShadow     = online ? '0 0 8px var(--green)' : '0 0 8px var(--accent)';
+      label.textContent       = online ? 'LIVE' : 'DEMO MODE';
+      banner.style.display    = online ? 'none' : 'block';
+    }
+
+    // ─── FETCH / LOAD ──────────────────────────────────────
+    async function loadDisasters() {
+      const online = await checkServer();
+      if (online) {
+        try {
+          const r = await fetch(`${API}/disasters`);
+          disasters = await r.json();
+        } catch { disasters = DEMO; }
+      } else {
+        disasters = [...DEMO];
+      }
+      renderList();
+      updateStats();
+      if (selectedId) showDetail(selectedId);
+    }
+
+    async function loadStats() {
+      if (!serverOnline) return;
+      try {
+        const r = await fetch(`${API}/stats`);
+        const s = await r.json();
+        document.getElementById('statTotal').textContent    = s.total;
+        document.getElementById('statAlerts').textContent   = s.totalAlerts;
+        document.getElementById('statServices').textContent = s.totalServiceActions;
+      } catch {}
+    }
+
+    function updateStats() {
+      const total    = disasters.length;
+      const alerts   = disasters.reduce((s,d) => s + (d.alerts?.length||0), 0);
+      const services = disasters.reduce((s,d) => s + (d.services?.length||0), 0);
+      document.getElementById('statTotal').textContent    = total;
+      document.getElementById('statAlerts').textContent   = alerts;
+      document.getElementById('statServices').textContent = services;
+    }
+
+    // ─── RENDER LIST ──────────────────────────────────────
+    function renderList() {
+      const el = document.getElementById('incidentList');
+      if (!disasters.length) {
+        el.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-family:var(--mono);font-size:11px;">No incidents yet.</div>`;
+        return;
+      }
+      el.innerHTML = disasters.map(d => `
+        <div class="disaster-card severity-${d.severity} ${d.id === selectedId ? 'active' : ''}"
+             onclick="showDetail('${d.id}')">
+          <div class="card-top">
+            <div class="card-type">
+              <span class="type-icon">${TYPE_ICON[d.type] || '⚠️'}</span>
+              <span class="type-${d.type}">${d.type}</span>
+            </div>
+            <span class="badge badge-${d.severity}">${d.severity}</span>
+          </div>
+          <div class="card-location">📍 ${d.location}</div>
+          <div class="card-meta">
+            <span>🔔 ${d.alerts?.length||0} alerts</span>
+            <span>🚨 ${d.services?.length||0} services</span>
+          </div>
+          <div class="card-id">${d.id}</div>
+        </div>
+      `).join('');
+    }
+
+    // ─── DETAIL VIEW ──────────────────────────────────────
+    function showDetail(id) {
+      selectedId = id;
+      renderList();
+
+      const d = disasters.find(x => x.id === id);
+      if (!d) return;
+
+      document.getElementById('mainTitle').textContent = d.id + ' — ' + d.type.toUpperCase();
+
+      const alertsHtml = (d.alerts||[]).map(a => `
+        <div class="log-item">
+          <div class="log-header">
+            <span class="log-role role-${a.role}">${a.role}</span>
+            <span class="log-name">${a.recipient}</span>
+            <span class="log-time">${a.timestamp}</span>
+          </div>
+          <div class="log-msg">${a.message}</div>
+        </div>
+      `).join('');
+
+      const servicesHtml = (d.services||[]).map(s => `
+        <div class="service-item">
+          <div class="service-icon">${SVC_ICON[s.service] || '⚙️'}</div>
+          <div class="service-info">
+            <div class="service-name">${s.service}</div>
+            <div class="service-action">${s.action}</div>
+          </div>
+          <div class="service-time">${s.timestamp}</div>
+        </div>
+      `).join('');
+
+      document.getElementById('detailView').innerHTML = `
+        <div class="detail-hero" data-type="${d.type.toUpperCase()}">
+          <div class="hero-icon">${TYPE_ICON[d.type] || '⚠️'}</div>
+          <div class="hero-info">
+            <h2 class="type-${d.type}">${d.type} Disaster</h2>
+            <div class="loc">📍 ${d.location}</div>
+            <div class="hero-meta">
+              <span class="badge badge-${d.severity}">${d.severity}</span>
+              <span class="chip">ID: ${d.id}</span>
+              <span class="chip">Status: ${d.status}</span>
+              <span class="chip">Reported: ${d.createdAt}</span>
+            </div>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel">
+            <div class="panel-head">
+              <span>🔔</span>
+              <span class="panel-head-title">Observer Alerts</span>
+              <span class="panel-head-count">${(d.alerts||[]).length}</span>
+            </div>
+            <div class="panel-body">${alertsHtml || '<div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px;">No alerts.</div>'}</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <span>🚨</span>
+              <span class="panel-head-title">Facade — Emergency Services</span>
+              <span class="panel-head-count">${(d.services||[]).length}</span>
+            </div>
+            <div class="panel-body">${servicesHtml || '<div style="padding:16px;color:var(--muted);font-family:var(--mono);font-size:11px;">No services.</div>'}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // ─── SUBMIT DISASTER ──────────────────────────────────
+    async function submitDisaster() {
+      const type     = document.getElementById('fType').value;
+      const location = document.getElementById('fLocation').value.trim();
+      const severity = document.getElementById('fSeverity').value;
+
+      if (!location) { toast('Enter a location', 'error'); return; }
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = 'DISPATCHING...';
+
+      if (serverOnline) {
+        try {
+          const r = await fetch(`${API}/disasters`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type, location, severity })
+          });
+          if (r.ok) {
+            const d = await r.json();
+            disasters.unshift(d);
+            renderList();
+            updateStats();
+            showDetail(d.id);
+            toast(`✓ ${d.type} disaster reported — ${d.id}`, 'success');
+            document.getElementById('fLocation').value = '';
+          } else {
+            const err = await r.json();
+            toast('Error: ' + err.error, 'error');
+          }
+        } catch (e) {
+          toast('Network error — is the server running?', 'error');
+        }
+      } else {
+        // Demo mode — simulate locally
+        const typeMap = { fire:'Fire', flood:'Flood', earthquake:'Earthquake', cyclone:'Cyclone' };
+        const typeName = typeMap[type];
+        const id = 'DIS-' + (1000 + disasters.length + 1);
+        const now = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+        const units = severity === 'CRITICAL' ? 6 : severity === 'HIGH' ? 4 : 2;
+        const d = {
+          id, type: typeName, location, severity, status: 'ACTIVE',
+          createdAt: new Date().toLocaleString('en-GB'),
+          alerts: [
+            { id:'A'+Date.now()+'1', recipient:'Local Resident 1', role:'CITIZEN',
+              message:`Local Resident 1 — ${typeName} emergency at ${location} [${severity}]. Evacuate immediately.`, timestamp: now },
+            { id:'A'+Date.now()+'2', recipient:'District Collector Office', role:'AUTHORITY',
+              message:`District Collector Office — ${typeName} at ${location}, severity ${severity}. Mobilise resources.`, timestamp: now }
+          ],
+          services: [
+            { service:'Police',   action:`Units dispatched to ${location} for crowd control (Priority: ${severity}).`, timestamp: now },
+            { service:'Hospital', action:`${units} ambulances + medical teams deployed to ${location}.`, timestamp: now },
+            { service:'Rescue',   action:`Specialised ${typeName} rescue team deployed to ${location} with full gear.`, timestamp: now },
+            ...(severity === 'HIGH' || severity === 'CRITICAL' ? [
+              { service:'NGO Relief', action:`Emergency relief camp established near ${location}.`, timestamp: now }
+            ] : [])
+          ]
+        };
+        disasters.unshift(d);
+        renderList();
+        updateStats();
+        showDetail(d.id);
+        toast(`✓ ${typeName} reported [DEMO] — ${id}`, 'success');
+        document.getElementById('fLocation').value = '';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'DISPATCH';
+    }
+
+    // ─── TOAST ────────────────────────────────────────────
+    function toast(msg, type='') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className   = type;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3000);
+    }
+
+    // ─── API TABS ─────────────────────────────────────────
+    function switchTab(btn, tabId) {
+      document.querySelectorAll('.api-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.api-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    // ─── AUTO REFRESH ─────────────────────────────────────
+    let countdown = 10;
+    function startRefresh() {
+      clearInterval(refreshInterval);
+      refreshInterval = setInterval(() => {
+        countdown--;
+        document.getElementById('refreshTimer').textContent = `auto-refresh: ${countdown}s`;
+        if (countdown <= 0) {
+          countdown = 10;
+          loadDisasters();
+        }
+      }, 1000);
+    }
+
+    // ─── INIT ─────────────────────────────────────────────
+    loadDisasters().then(startRefresh);
+</script>
+</body>
+</html>

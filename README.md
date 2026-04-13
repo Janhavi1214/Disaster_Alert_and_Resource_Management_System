@@ -2,7 +2,7 @@
 
 A full-stack Java project demonstrating three core Design Patterns through a real working application — a disaster management dashboard with a REST API backend and a live browser frontend.
 
-Built with **pure Java** (no frameworks) and **vanilla HTML/JS** (no build tools). Zero dependencies.
+Built with **pure Java** and **vanilla HTML/JS**. Zero dependencies.
 
 ---
 
@@ -38,7 +38,7 @@ Everything lives in two files. No packages, no Maven, no Gradle.
 
 ## Running the project
 
-### Step 1 — Start the backend
+### Step 1 — Start the Backend
 
 **From terminal:**
 ```bash
